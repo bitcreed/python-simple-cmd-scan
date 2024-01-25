@@ -27,9 +27,11 @@ from .logger import log
 
 
 class ScanJob:
-    def __init__(self, default_complete=False) -> None:
+    def __init__(self, output_dir, output_filename, default_complete=False) -> None:
         self.scanned_page_images = []
         self.complete = default_complete
+        self.output_dir = output_dir
+        self.output_filename = output_filename
 
     @property
     def images(self):
@@ -49,13 +51,13 @@ class ScanJob:
         if self.num_pages != scan_back.num_pages:
             raise ValueError("Number of front and back pages needs to be the same")
 
-        combined = ScanJob(default_complete=True)
+        combined = ScanJob(self.output_dir, self.output_filename, default_complete=True)
         combined.scanned_page_images = [None] * (self.num_pages + scan_back.num_pages)
         combined.scanned_page_images[::2] = self.images
         combined.scanned_page_images[1::2] = scan_back.images[::-1]
         return combined
 
-    def create_pdf(self, output_dir, output_filename=None, suffix=""):
+    def create_pdf(self, suffix=""):
         if not self.scanned_page_images:
             log.debug("No scans available, not creating PDF")
             return
@@ -71,8 +73,8 @@ class ScanJob:
             image.save(pdf_bytes, format="PDF")
             pdf_writer.append_pages_from_reader(PdfReader(pdf_bytes))
 
-        output_filename = output_filename or f"{datetime.now().strftime('%Y-%m-%d_%H%M')}_scan{suffix}.pdf"
-        output_path = os.path.join(output_dir, output_filename)
+        output_filename = f"{datetime.now().strftime(self.output_filename)}{suffix}.pdf"
+        output_path = os.path.join(self.output_dir, output_filename)
 
         with open(output_path, "wb") as f:
             pdf_writer.write(f)
@@ -87,6 +89,7 @@ class SimpleCmdScan:
     RET_NO_SCANNER = 2
     DEFAULT_RESOLUTION_TEXT = 150
     DEFAULT_RESOLUTION_PICTURE = 300
+    DEFAULT_OUTPUT_FILENAME = "%Y-%m-%d_%H%M_scan"
     # Common paper sizes in mm (width x height)
     PAPER_SIZES_MM = {
         'a4': ('A4', 210, 297),
@@ -99,6 +102,7 @@ class SimpleCmdScan:
         self.find_scanners = args.find_scanners
         self.scan_device = args.scanner
         self.output_dir = args.output_dir or os.getcwd()
+        self.output_filename = args.output_filename or SimpleCmdScan.DEFAULT_OUTPUT_FILENAME
         self.adf_scan = args.adf
         self.paper_format = args.paper_format
         self.resolution_dpi = args.resolution_dpi or SimpleCmdScan.DEFAULT_RESOLUTION_TEXT
@@ -203,7 +207,7 @@ class SimpleCmdScan:
 
         try:
             log.debug("Scanning page...")
-            job = job or ScanJob(default_complete=True)
+            job = job or ScanJob(self.output_dir, self.output_filename, default_complete=True)
             im = self.scanner.scan()
             file_path = SimpleCmdScan._save_single_page(im, job.num_pages + idx_offset + 1, temp_dir)
             job.add_image(file_path)
@@ -218,7 +222,7 @@ class SimpleCmdScan:
         return job
 
     def _run_multi_scan(self, temp_dir, idx_offset=0):
-        job = ScanJob()
+        job = ScanJob(self.output_dir, self.output_filename)
         try:
             for i, im in enumerate(self.scanner.multi_scan()):
                 file_path = SimpleCmdScan._save_single_page(im, idx_offset + i, temp_dir)
@@ -241,7 +245,7 @@ class SimpleCmdScan:
         with tempfile.TemporaryDirectory(prefix="scan") as temp_dir:
             job = None
             if self.multidoc_mode in [None, "join"]:
-                job = ScanJob(default_complete=True)
+                job = ScanJob(self.output_dir, self.output_filename, default_complete=True)
 
             try:
                 for i in range(SimpleCmdScan.MAX_SCANS):
@@ -250,7 +254,7 @@ class SimpleCmdScan:
                         break
                     else:
                         if self.multidoc_mode == "split":
-                            job.create_pdf(self.output_dir)
+                            job.create_pdf()
                             job = None
 
                         input(
@@ -264,7 +268,7 @@ class SimpleCmdScan:
             finally:
                 self.close_scanner()
                 if job is not None:
-                    job.create_pdf(self.output_dir)
+                    job.create_pdf()
 
         return SimpleCmdScan.RET_OK
 
@@ -281,14 +285,14 @@ class SimpleCmdScan:
                     log.error(
                         "Error while scanning, aborting double-sided scan. Saving partial scan."
                     )
-                    scan_front.create_pdf(self.output_dir, "_front_partial")
+                    scan_front.create_pdf("_front_partial")
                     return SimpleCmdScan.RET_ERR
 
                 try:
                     input("Please flip the stack and press Enter to continue scanning the back sides or CTRL+D to abort...")
 
                 except EOFError:
-                    scan_front.create_pdf(self.output_dir, "_front")
+                    scan_front.create_pdf("_front")
                     return SimpleCmdScan.RET_ERR
 
                 # Scan the back sides
@@ -297,8 +301,8 @@ class SimpleCmdScan:
                     log.error(
                         "Error while scanning, aborting double-sided scan. Saving partial scans."
                     )
-                    scan_front.create_pdf(self.output_dir, "_front")
-                    scan_back.create_pdf(self.output_dir, "_back_partial")
+                    scan_front.create_pdf("_front")
+                    scan_back.create_pdf("_back_partial")
                     return SimpleCmdScan.RET_ERR
 
             finally:
@@ -308,15 +312,15 @@ class SimpleCmdScan:
                 log.error(
                     "Mismatch in the number of front and back pages. Creating separate output files."
                 )
-                scan_front.create_pdf(self.output_dir, "_front")
-                scan_back.create_pdf(self.output_dir, "_back")
+                scan_front.create_pdf("_front")
+                scan_back.create_pdf("_back")
                 return SimpleCmdScan.RET_ERR
 
             # Reorder back images (as they are in reverse order)
 
             # Combine front and back images
             combined = scan_front.merge_back_images(scan_back)
-            combined.create_pdf(self.output_dir)
+            combined.create_pdf()
 
         return SimpleCmdScan.RET_OK
 

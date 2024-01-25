@@ -65,6 +65,15 @@ class AppStarter:
             "Also via env SCAN_OUTPUT_DIR or .env",
         )
         options.add_argument(
+            "-n",
+            "--output-filename",
+            help="Filename or filename format of files in output folder. "
+            "Do not include the .pdf ending. "
+            "A suffix _front or _incomplete is added if the scan aborts. "
+            "Default is %%Y-%%m-%%d_%%H%%M_scan. "
+            "Also via env SCAN_OUTPUT_FILENAME or .env",
+        )
+        options.add_argument(
             "-p",
             "--paper-format",
             choices=["A4", "Letter", "Legal"],
@@ -119,6 +128,7 @@ class AppStarter:
         if args.multidoc not in [None, "join", "split"]:
             args.multidoc = "join"  # default value off an unknown value set through env
         args.output_dir = args.output_dir or config("SCAN_OUTPUT_DIR", default=None)
+        args.output_filename = args.output_filename or config("SCAN_OUTPUT_FILENAME", default=None)
         args.scanner = args.scanner or config("SCAN_DEVICE", default=None)
         args.paper_format = args.paper_format or config("SCAN_PAPER_FORMAT", default=None)
         args.resolution_dpi = args.resolution or config("SCAN_RESOLUTION_DPI", default=None)
