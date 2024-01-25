@@ -19,6 +19,7 @@ import argparse
 import sys
 
 from decouple import config
+from . import __version__
 from .logger import set_log_level
 from .scan_controller import SimpleCmdScan
 
@@ -99,6 +100,12 @@ class AppStarter:
             "Default is WARN. "
             "Valid values are DEBUG, INFO, WARN, ERROR, FATAL.",
         )
+        options.add_argument(
+            "-v",
+            "--version",
+            action="store_true",
+            help="Print version and exit"
+        )
 
         args = options.parse_args(argv[1:])
 
@@ -121,8 +128,13 @@ class AppStarter:
 
     def run(self, argv):
         args = AppStarter.parse_arguments(argv)
+        if (args.version):
+            print(__version__)
+            sys.exit(0)
+
         if args.loglevel:
             set_log_level(args.loglevel)
+
         self.controller = SimpleCmdScan(args)
         try:
             ret = self.controller.run()
