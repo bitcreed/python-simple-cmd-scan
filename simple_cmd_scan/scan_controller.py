@@ -89,9 +89,9 @@ class SimpleCmdScan:
     DEFAULT_RESOLUTION_PICTURE = 300
     # Common paper sizes in mm (width x height)
     PAPER_SIZES_MM = {
-        'a4': (210, 297),
-        'letter': (215.9, 279.4),
-        'legal': (215.9, 355.6)
+        'a4': ('A4', 210, 297),
+        'letter': ('Letter', 215.9, 279.4),
+        'legal': ('Legal', 215.9, 355.6)
     }
 
     def __init__(self, args):
@@ -128,11 +128,12 @@ class SimpleCmdScan:
         if paper_format not in SimpleCmdScan.PAPER_SIZES_MM:
             def_paper_format = SimpleCmdScan.get_default_paper_size()
             if paper_format:
-                log.error(f"Unsupported paper format: {paper_format}. Using default {def_paper_format}.")
+                def_str = SimpleCmdScan.PAPER_SIZES_MM[def_paper_format][0]
+                log.error(f"Unsupported paper format: {paper_format}. Using default {def_str}.")
             paper_format = def_paper_format
-        log.debug(f"Using paper format {paper_format}")
 
-        width_mm, height_mm = SimpleCmdScan.PAPER_SIZES_MM[paper_format]
+        format, width_mm, height_mm = SimpleCmdScan.PAPER_SIZES_MM[paper_format]
+        log.debug(f"Using paper format {format}")
 
         # self.scanner.unit = "UNIT_MM"
         self.scanner.br_x = width_mm
