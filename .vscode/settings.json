@@ -2,11 +2,13 @@
     "cSpell.words": [
         "Andreas",
         "Brauchli",
+        "capsys",
         "diskspace",
         "multidoc",
         "ntlm",
         "pypdf",
         "pywinrm",
+        "setenv",
         "winmon"
     ]
 }
