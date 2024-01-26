@@ -111,6 +111,7 @@ class SimpleCmdScan:
         self.output_dir = args.output_dir or os.getcwd()
         self.output_filename = args.output_filename or SimpleCmdScan.DEFAULT_OUTPUT_FILENAME
         self.adf_scan = args.adf
+        self.color_mode = args.color_mode
         self.paper_format = args.paper_format
         self.resolution_dpi = None
         if args.resolution:
@@ -185,6 +186,8 @@ class SimpleCmdScan:
             log.info(f"Using device {scanner}")
             self.scanner = sane.open(scanner)
             self.scanner.resolution = self.resolution_dpi
+            if self.color_mode:
+                self.scanner.mode = self.color_mode
             self.set_paper_size(self.paper_format)
             if self.adf_scan:
                 log.debug("Configuring scanner for ADF...")
