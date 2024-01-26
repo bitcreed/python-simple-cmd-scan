@@ -140,23 +140,22 @@ class AppStarter:
         args = AppStarter.parse_arguments(argv)
         if (args.version):
             print(__version__)
-            sys.exit(0)
+            return 0
 
         if args.loglevel:
             set_log_level(args.loglevel)
 
         self.controller = SimpleCmdScan(args)
         try:
-            ret = self.controller.run()
-            sys.exit(ret)
+            return self.controller.run()
         except KeyboardInterrupt:
             print("\nExiting...")
-            sys.exit(1)
+            return 1
 
 
-def main():
+def main(argv=sys.argv):
     app = AppStarter()
-    app.run(sys.argv)
+    sys.exit(app.run(argv))
 
 
 if __name__ == "__main__":
