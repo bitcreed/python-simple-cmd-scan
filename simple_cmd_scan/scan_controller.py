@@ -268,11 +268,11 @@ class SimpleCmdScan:
 
         with tempfile.TemporaryDirectory(prefix="scan") as temp_dir:
             job = None
-            if self.multidoc_mode in [None, "join"]:
+            if self.multidoc_mode == "join":
                 job = ScanJob(self.output_dir, self.output_filename, default_complete=True)
 
             try:
-                for i in range(SimpleCmdScan.MAX_SCANS):
+                for _ in range(SimpleCmdScan.MAX_SCANS):
                     job = self._run_one_sided_scan(temp_dir, job=job)
                     if self.multidoc_mode is None:
                         break
