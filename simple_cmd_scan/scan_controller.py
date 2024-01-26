@@ -14,15 +14,16 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-import locale
-import os
-import tempfile
-from pypdf import PdfWriter, PdfReader
-from PIL import Image
 import io
+import locale
+import tempfile
+import os
 import sane
+import sys
 
 from datetime import datetime
+from pypdf import PdfWriter, PdfReader
+from PIL import Image
 from .logger import log
 
 
@@ -79,7 +80,9 @@ class ScanJob:
         with open(output_path, "wb") as f:
             pdf_writer.write(f)
 
-        log.info(f"PDF created: {output_path}")
+        msg = f"PDF ({len(self.scanned_page_images)} pages) created: {output_path}"
+        log.info(msg)
+        print(msg)
 
 
 class SimpleCmdScan:
@@ -160,7 +163,9 @@ class SimpleCmdScan:
             if not scanner:
                 devices = self.list_scanners()
                 if not devices:
-                    log.warning("No scanners found.")
+                    msg = "No scanners found."
+                    log.warning(msg)
+                    print(msg, file=sys.stderr)
                     return SimpleCmdScan.RET_NO_SCANNER
                 # Use the first available scanner
                 scanner = devices[0][0]
@@ -196,10 +201,12 @@ class SimpleCmdScan:
 
     def _handle_sane_error(e, job):
         job.mark_complete(False)
+        msg = f"An error occurred during scanning: {e}"
         if str(e) == "Document feeder jammed":
             log.error(e)
         else:
-            log.exception(f"An error occurred during scanning: {e}")
+            log.exception()
+        print(msg, file=sys.stderr)
 
     def _run_one_sided_scan(self, temp_dir, idx_offset=0, job=None):
         if self.adf_scan:
@@ -217,7 +224,9 @@ class SimpleCmdScan:
 
         except Exception as e:
             job.mark_complete(False)
-            log.exception(f"An error occurred during scanning: {e}")
+            msg = f"An error occurred during scanning: {e}"
+            log.exception(msg)
+            print(msg, file=sys.stderr)
 
         return job
 
