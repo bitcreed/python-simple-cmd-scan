@@ -19,14 +19,16 @@ from simple_cmd_scan.scan_controller import ScanJob
 
 class TestScanJob:
     def test_merge(self):
+        output_dir = '/tmp/test'
+        output_filename = 'scan'
         front = ['1', '3', '5']
         back = ['6', '4', '2']
 
-        front_job = ScanJob()
+        front_job = ScanJob(output_dir, output_filename)
         for i in front:
             front_job.add_image(i)
 
-        back_job = ScanJob()
+        back_job = ScanJob(output_dir, output_filename)
         for i in back:
             back_job.add_image(i)
 
