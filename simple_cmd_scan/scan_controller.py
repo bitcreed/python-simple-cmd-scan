@@ -93,6 +93,10 @@ class SimpleCmdScan:
     DEFAULT_RESOLUTION_TEXT = 150
     DEFAULT_RESOLUTION_PICTURE = 300
     DEFAULT_OUTPUT_FILENAME = "%Y-%m-%d_%H%M_scan"
+    RESOLUTION_OPTIONS = {
+        'text': DEFAULT_RESOLUTION_TEXT,
+        'picture': DEFAULT_RESOLUTION_PICTURE,
+    }
     # Common paper sizes in mm (width x height)
     PAPER_SIZES_MM = {
         'a4': ('A4', 210, 297),
@@ -108,7 +112,15 @@ class SimpleCmdScan:
         self.output_filename = args.output_filename or SimpleCmdScan.DEFAULT_OUTPUT_FILENAME
         self.adf_scan = args.adf
         self.paper_format = args.paper_format
-        self.resolution_dpi = args.resolution_dpi or SimpleCmdScan.DEFAULT_RESOLUTION_TEXT
+        self.resolution_dpi = None
+        if args.resolution:
+            try:
+                self.resolution_dpi = int(args.resolution)
+            except ValueError:
+                res = args.resolution.lower()
+                if res in SimpleCmdScan.RESOLUTION_OPTIONS:
+                    self.resolution_dpi = SimpleCmdScan.RESOLUTION_OPTIONS[res]
+        self.resolution_dpi = self.resolution_dpi or SimpleCmdScan.DEFAULT_RESOLUTION_TEXT
         self.double_sided = args.double_sided
         self.multidoc_mode = args.multidoc
         # Initialize SANE
