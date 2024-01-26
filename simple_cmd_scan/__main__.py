@@ -29,65 +29,88 @@ class AppStarter:
         self.controller = None
 
     @staticmethod
+    def add_env_argument(options, env_var, *args, **kwargs):
+        env_val = config(env_var, default=None)
+        env_text = env_val is not None and f"{env_var}={env_val}" or "unset"
+        help_suffix = f"Also via env {env_var} or .env file, currently {env_text}"
+        if env_val and 'action' in kwargs and kwargs["action"] == "store_true":
+            env_val = bool(env_val)
+
+        if 'help' in kwargs:
+            kwargs['help'] += f" {help_suffix}"
+        else:
+            kwargs['help'] = help_suffix
+
+        if env_val is not None:
+            kwargs['default'] = env_val
+
+        options.add_argument(*args, **kwargs)
+
+    @staticmethod
     def parse_arguments(argv):
         options = argparse.ArgumentParser()
-        options.add_argument(
-            "-a",
-            "--adf",
+
+        AppStarter.add_env_argument(
+            options, 'SCAN_ADF',
+            "-a", "--adf",
             action="store_true",
-            help="Scan all documents from the Automated Document Feeder (ADF). "
-            "Also via env SCAN_ADF=1 or .env",
+            help="Scan all documents from the Automated Document Feeder (ADF) instead of the flatbed scanner."
         )
-        options.add_argument(
-            "-d",
-            "--double-sided",
+        AppStarter.add_env_argument(
+            options, 'SCAN_COLOR_MODE',
+            "-c", "--color-mode",
+            nargs='?',
+            choices=['color', 'grayscale', 'bw'],
+            const='color',
+            help="Color mode. Default is color."
+        )
+        AppStarter.add_env_argument(
+            options, 'SCAN_DOUBLE_SIDED',
+            "-d", "--double-sided",
             action="store_true",
-            help="Double-sided scan. Prompts the user to flip the stack, then merges pages. "
-            "Also via env SCAN_DOUBLE_SIDED=1 or .env",
+            help="Double-sided scan. Prompts the user to flip the stack, then merges pages."
         )
-        options.add_argument(
-            "-m",
-            "--multidoc",
+        AppStarter.add_env_argument(
+            options, 'SCAN_MULTIPLE_DOCUMENTS',
+            "-m", "--multidoc",
+            nargs='?',
             choices=["join", "split"],
-            default="join",
+            const="join",
             help="Keep scanning documents until the user aborts."
-            "If used with --adf, separate documents are created regardless of the option chosen, "
+            "If used together with --adf, --multidoc split is used "
+            "and separate documents are created regardless of the option chosen, "
             "without --adf the following options are available: join [default] or split. "
             "With `join' a single document is produced from all scanned pages, "
-            "With `split' separate documents are produced from each scanned page "
-            "Also via env SCAN_MULTIPLE_DOCUMENTS=join or .env",
+            "With `split' separate documents are produced from each scanned page."
         )
-        options.add_argument(
-            "-o",
-            "--output-dir",
+        AppStarter.add_env_argument(
+            options, 'SCAN_OUTPUT_DIR',
+            "-o", "--output-dir",
             help="Output directory to store scanned documents in. "
-            "Default is the current work directory. "
-            "Also via env SCAN_OUTPUT_DIR or .env",
+            "Default is the current work directory."
         )
-        options.add_argument(
-            "-n",
-            "--output-filename",
+        AppStarter.add_env_argument(
+            options, 'SCAN_OUTPUT_FILENAME',
+            "-n", "--output-filename",
             help="Filename or filename format of files in output folder. "
             "Do not include the .pdf ending. "
             "A suffix _front or _incomplete is added if the scan aborts. "
-            "Default is %%Y-%%m-%%d_%%H%%M_scan. "
-            "Also via env SCAN_OUTPUT_FILENAME or .env",
+            "Default is %%Y-%%m-%%d_%%H%%M_scan."
         )
-        options.add_argument(
-            "-p",
-            "--paper-format",
+        AppStarter.add_env_argument(
+            options, 'SCAN_PAPER_FORMAT',
+            "-p", "--paper-format",
             choices=["A4", "Letter", "Legal"],
             help="Paper format to use. "
-            "Default is depending on your locale. "
-            "Also via env SCAN_PAPER_FORMAT or .env",
+            "Default is depending on your locale."
         )
-        options.add_argument(
-            "-r",
-            "--resolution",
+        AppStarter.add_env_argument(
+            options, 'SCAN_RESOLUTION_DPI',
+            "-r", "--resolution",
             help=f"Scan resolution in DPI Text is recommended at {SimpleCmdScan.DEFAULT_RESOLUTION_TEXT}, "
             f"pictures at {SimpleCmdScan.DEFAULT_RESOLUTION_PICTURE}. "
             f"Default {SimpleCmdScan.DEFAULT_RESOLUTION_TEXT} (Text). "
-            "Also via env SCAN_RESOLUTION_DPI or .env",
+            "Choices [int], text, image."
         )
         options.add_argument(
             "-f",
@@ -95,19 +118,17 @@ class AppStarter:
             action="store_true",
             help="Find and list scanners - no actual scanning (useful to set a default with .env)",
         )
-        options.add_argument(
-            "-s",
-            "--scanner",
+        AppStarter.add_env_argument(
+            options, 'SCAN_DEVICE',
+            "-s", "--scanner",
             help="Set the scanner to use. "
-            "Default is the first listing with --find-scanners. "
-            "Also via env SCAN_DEVICE or .env.",
+            "Default is the first listing with --find-scanners."
         )
-        options.add_argument(
-            "-l",
-            "--loglevel",
-            help="Log level. Also via env LOGLEVEL or .env. "
-            "Default is WARN. "
-            "Valid values are DEBUG, INFO, WARN, ERROR, FATAL.",
+        AppStarter.add_env_argument(
+            options, 'LOG_LEVEL',
+            "-l", "--loglevel",
+            choices=['DEBUG', 'INFO', 'WARN', 'ERROR', 'FATAL'],
+            help="Set the log level. Default is WARN."
         )
         options.add_argument(
             "-v",
@@ -116,25 +137,7 @@ class AppStarter:
             help="Print version and exit"
         )
 
-        args = options.parse_args(argv[1:])
-
-        args.adf = args.adf or config("SCAN_ADF", default="0") == "1"
-        args.double_sided = (
-            args.double_sided or config("SCAN_DOUBLE_SIDED", default="0") == "1"
-        )
-        args.multidoc = args.double_sided or config(
-            "SCAN_MULTIPLE_DOCUMENTS", default=None
-        )
-        if args.multidoc not in [None, "join", "split"]:
-            args.multidoc = "join"  # default value off an unknown value set through env
-        args.output_dir = args.output_dir or config("SCAN_OUTPUT_DIR", default=None)
-        args.output_filename = args.output_filename or config("SCAN_OUTPUT_FILENAME", default=None)
-        args.scanner = args.scanner or config("SCAN_DEVICE", default=None)
-        args.paper_format = args.paper_format or config("SCAN_PAPER_FORMAT", default=None)
-        args.resolution_dpi = args.resolution or config("SCAN_RESOLUTION_DPI", default=None)
-        args.loglevel = args.loglevel or config("LOGLEVEL", default="WARN")
-
-        return args
+        return options.parse_args(argv[1:])
 
     def run(self, argv):
         args = AppStarter.parse_arguments(argv)
