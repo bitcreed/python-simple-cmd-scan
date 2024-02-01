@@ -16,7 +16,6 @@
 
 import io
 import logging
-import locale
 import tempfile
 import os
 import sane
@@ -26,6 +25,7 @@ from datetime import datetime
 from pypdf import PdfWriter, PdfReader
 from PIL import Image
 from .logger import log
+from .utils import get_default_paper_size, test_write_to_folder
 
 
 class ScanJob:
@@ -133,18 +133,6 @@ class SimpleCmdScan:
         except Exception as e:
             log.error(f"Error initializing SANE: {e}")
 
-    @staticmethod
-    def get_default_paper_size():
-        # Check LC_PAPER environment variable
-        loc = os.environ.get('LC_PAPER')
-        loc = loc and loc.split('.') or loc
-        if not loc:
-            # Fallback: Check locale settings
-            loc = locale.getlocale()
-
-        if loc[0] and ('US' in loc[0] or 'CA' in loc[0]):
-            return 'letter'
-        return 'a4'  # Most other countries use A4
 
     def log_and_print(self, msg, level=logging.INFO):
         log.log(level, msg)
@@ -154,9 +142,9 @@ class SimpleCmdScan:
             print(msg, file=outfile)
 
     def set_paper_size(self, paper_format=None):
-        paper_format = paper_format and paper_format.lower() or SimpleCmdScan.get_default_paper_size()
+        paper_format = paper_format and paper_format.lower() or get_default_paper_size()
         if paper_format not in SimpleCmdScan.PAPER_SIZES_MM:
-            def_paper_format = SimpleCmdScan.get_default_paper_size()
+            def_paper_format = get_default_paper_size()
             if paper_format:
                 def_str = SimpleCmdScan.PAPER_SIZES_MM[def_paper_format][0]
                 log.error(f"Unsupported paper format: {paper_format}. Using default {def_str}.")
