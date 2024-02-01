@@ -34,6 +34,7 @@ def mock_create_pdf(mocker):
 
 
 @patch.object(SimpleCmdScan, 'MAX_SCANS', 10)
+@patch('simple_cmd_scan.scan_controller.test_write_to_folder')
 class TestSimpleCmdScan:
     @classmethod
     def setup_class(cls):
@@ -46,14 +47,14 @@ class TestSimpleCmdScan:
     def teardown_class(cls):
         cls.mock_temp_dir_patch.stop()
 
-    def test_list_scanners(self, mock_sane):
+    def test_list_scanners(self, mock_test_write_to_folder, mock_sane):
         args = MagicMock(find_scanners=True)
         scanner_app = SimpleCmdScan(args)
         ret = scanner_app.run()
         assert ret == SimpleCmdScan.RET_OK, "ret is not RET_OK"
         assert mock_sane.get_devices, "List of devices is empty"
 
-    def test_list_scanners_no_devices(self, mocker):
+    def test_list_scanners_no_devices(self, mock_test_write_to_folder, mocker):
         # Override the mock_sane fixture for this test
         mocker.patch('sane.get_devices', return_value=[])
         args = MagicMock(find_scanners=True)
@@ -61,7 +62,7 @@ class TestSimpleCmdScan:
         ret = scanner_app.run()
         assert ret == SimpleCmdScan.RET_NO_SCANNER, "List of devices is not empty or wrong return value"
 
-    def test_scan_single_sided(self, mock_sane, mock_create_pdf):
+    def test_scan_single_sided(self, mock_test_write_to_folder, mock_sane, mock_create_pdf):
         args = MagicMock(adf=False, double_sided=False, multidoc=None)
         scanner_app = SimpleCmdScan(args)
         with patch('builtins.input', return_value=''):
@@ -70,7 +71,7 @@ class TestSimpleCmdScan:
         mock_sane.return_value.scan.assert_called_once()
         mock_create_pdf.assert_called_once()
 
-    def test_scan_adf_double_sided(self, mock_sane, mock_create_pdf):
+    def test_scan_adf_double_sided(self, mock_test_write_to_folder, mock_sane, mock_create_pdf):
         args = MagicMock(adf=True, double_sided=True)
         scanner_app = SimpleCmdScan(args)
         # # Two pages in the ADF, flip, two pages
@@ -82,7 +83,7 @@ class TestSimpleCmdScan:
         assert mock_sane.return_value.multi_scan.call_count == 2, "multi_scan not called twice"
         mock_create_pdf.assert_called_once()
 
-    def test_multidoc_mode_split(self, mock_sane, mock_create_pdf):
+    def test_multidoc_mode_split(self, mock_test_write_to_folder, mock_sane, mock_create_pdf):
         args = MagicMock(adf=False, double_sided=False, multidoc='split')
         scanner_app = SimpleCmdScan(args)
 
@@ -93,7 +94,7 @@ class TestSimpleCmdScan:
         assert ret == SimpleCmdScan.RET_OK, "ret is not RET_OK"
         assert mock_create_pdf.call_count == 2, "create_pdf() call count is not 2"
 
-    def test_multidoc_mode_join(self, mock_sane, mock_create_pdf):
+    def test_multidoc_mode_join(self, mock_test_write_to_folder, mock_sane, mock_create_pdf):
         args = MagicMock(adf=False, double_sided=False, multidoc='join')
         scanner_app = SimpleCmdScan(args)
 
