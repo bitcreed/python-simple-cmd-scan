@@ -127,12 +127,20 @@ class SimpleCmdScan:
         self.resolution_dpi = self.resolution_dpi or SimpleCmdScan.DEFAULT_RESOLUTION_TEXT
         self.double_sided = args.double_sided
         self.multidoc_mode = args.multidoc
+
+    def init(self):
+        if not test_write_to_folder(self.output_dir):
+            self.log_and_print(f"No write access to output folder: {self.output_dir}", logging.ERROR)
+            return False
+
         # Initialize SANE
         try:
             sane.init()
         except Exception as e:
-            log.error(f"Error initializing SANE: {e}")
+            self.log_and_print(f"Error initializing SANE: {e}", logging.ERROR)
+            return False
 
+        return True
 
     def log_and_print(self, msg, level=logging.INFO):
         log.log(level, msg)
@@ -345,6 +353,9 @@ class SimpleCmdScan:
         return SimpleCmdScan.RET_OK
 
     def run(self):
+        if not self.init():
+            return SimpleCmdScan.RET_ERR
+
         if self.find_scanners:
             scanners = self.list_scanners()
             for s in scanners:
