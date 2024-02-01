@@ -15,6 +15,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import io
+import logging
 import locale
 import tempfile
 import os
@@ -58,7 +59,7 @@ class ScanJob:
         combined.scanned_page_images[1::2] = scan_back.images[::-1]
         return combined
 
-    def create_pdf(self, suffix=""):
+    def create_pdf(self, suffix="", quiet_mode=False):
         if not self.scanned_page_images:
             log.debug("No scans available, not creating PDF")
             return
@@ -82,7 +83,8 @@ class ScanJob:
 
         msg = f"PDF ({len(self.scanned_page_images)} pages) created: {output_path}"
         log.info(msg)
-        print(msg)
+        if not quiet_mode:
+            print(msg)
 
 
 class SimpleCmdScan:
@@ -105,6 +107,7 @@ class SimpleCmdScan:
     }
 
     def __init__(self, args):
+        self.quiet_mode = False
         self.scanner = None
         self.find_scanners = args.find_scanners
         self.scan_device = args.scanner
@@ -143,6 +146,13 @@ class SimpleCmdScan:
             return 'letter'
         return 'a4'  # Most other countries use A4
 
+    def log_and_print(self, msg, level=logging.INFO):
+        log.log(level, msg)
+
+        if not self.quiet_mode:
+            outfile = level >= logging.WARNING and sys.stderr or sys.stdout
+            print(msg, file=outfile)
+
     def set_paper_size(self, paper_format=None):
         paper_format = paper_format and paper_format.lower() or SimpleCmdScan.get_default_paper_size()
         if paper_format not in SimpleCmdScan.PAPER_SIZES_MM:
@@ -176,9 +186,7 @@ class SimpleCmdScan:
             if not scanner:
                 devices = self.list_scanners()
                 if not devices:
-                    msg = "No scanners found."
-                    log.warning(msg)
-                    print(msg, file=sys.stderr)
+                    self.log_and_print("No scanners found.", logging.WARNING)
                     return SimpleCmdScan.RET_NO_SCANNER
                 # Use the first available scanner
                 scanner = devices[0][0]
@@ -214,14 +222,13 @@ class SimpleCmdScan:
         log.debug(f"Scanned image saved to {file_path}")
         return file_path
 
-    def _handle_sane_error(e, job):
+    def _handle_sane_error(self, e, job):
         job.mark_complete(False)
         msg = f"An error occurred during scanning: {e}"
         if str(e) == "Document feeder jammed":
-            log.error(e)
+            self.log_and_print(msg, logging.ERROR)
         else:
             log.exception()
-        print(msg, file=sys.stderr)
 
     def _run_one_sided_scan(self, temp_dir, idx_offset=0, job=None):
         if self.adf_scan:
@@ -241,7 +248,8 @@ class SimpleCmdScan:
             job.mark_complete(False)
             msg = f"An error occurred during scanning: {e}"
             log.exception(msg)
-            print(msg, file=sys.stderr)
+            if not self.quiet_mode:
+                print(msg, file=sys.stderr)
 
         return job
 
