@@ -16,4 +16,4 @@
 
 __app_name__ = "Simple CMD Scan"
 __author__ = "Andreas Brauchli, bitcreed LLC"
-__version__ = "0.2.0"
+__version__ = "0.2.1"
