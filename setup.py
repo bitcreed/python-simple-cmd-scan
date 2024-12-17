@@ -25,19 +25,19 @@ def read(fname):
 
 requirements = [
     'python-decouple~=3.8',
-    'pypdf~=4.0.0',
-    'Pillow~=10.2.0',
+    'pypdf~=4.3.1',
+    'Pillow~=10.4.0',
     'python-sane~=2.9.1',
 ]
 
 extras_require = {
     'dev': [
-        'pytest~=7.4.4',
-        'pytest-mock~=3.12.0',
+        'pytest~=8.3.2',
+        'pytest-mock~=3.14.0',
     ],
     'deploy': [
-        'PyInstaller==5.11',
-        'setuptools~=67.7.2',
+        'PyInstaller==6.10',
+        'setuptools~=72.2.0',
     ]
 }
 
