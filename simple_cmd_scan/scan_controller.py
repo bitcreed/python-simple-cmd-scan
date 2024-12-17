@@ -198,8 +198,12 @@ class SimpleCmdScan:
                 self.scanner.source = "ADF"
                 self.scanner.batch_scan = True
 
-        except Exception as e:
+        except sane._sane.error as e:
             log.error(f"Error opening scanner: {e}")
+            return SimpleCmdScan.RET_ERR
+
+        except Exception as e:
+            log.error(f"Unknown Error: {e}")
             return SimpleCmdScan.RET_ERR
 
         return SimpleCmdScan.RET_OK
@@ -221,10 +225,7 @@ class SimpleCmdScan:
     def _handle_sane_error(self, e, job):
         job.mark_complete(False)
         msg = f"An error occurred during scanning: {e}"
-        if str(e) == "Document feeder jammed":
-            self.log_and_print(msg, logging.ERROR)
-        else:
-            log.exception()
+        self.log_and_print(msg, logging.ERROR)
 
     def _run_one_sided_scan(self, temp_dir, idx_offset=0, job=None):
         if self.adf_scan:
@@ -237,7 +238,7 @@ class SimpleCmdScan:
             file_path = SimpleCmdScan._save_single_page(im, job.num_pages + idx_offset + 1, temp_dir)
             job.add_image(file_path)
 
-        except sane.error as e:
+        except sane._sane.error as e:
             self._handle_sane_error(e, job)
 
         except Exception as e:
@@ -257,7 +258,7 @@ class SimpleCmdScan:
                 job.add_image(file_path)
             job.mark_complete()
 
-        except sane.error as e:
+        except sane._sane.error as e:
             self._handle_sane_error(e, job)
 
         except Exception as e:
